@@ -1,17 +1,23 @@
-from rest_framework import mixins, viewsets
+from rest_framework import mixins, viewsets, status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import serializers
+from rest_framework.decorators import action
 
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count
 
 from social.models import (
-    Post
+    Post,
+    Like,
+    Comment,
 )
 from social.serializers import (
     PostSerializer,
     PostListSerializer,
     PostDetailSerializer,
+    CommentCreateSerializer,
 )
 
 
@@ -43,6 +49,63 @@ class PostViewSet(
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
+    @action(
+        detail=True,
+        methods=["post", "delete"],
+        url_path="like"
+    )
+    def like(self, request, pk=None):
+        post = self.get_object()
+        author = self.request.user
+
+        if request.method == "POST":
+            _, created = Like.objects.get_or_create(
+                post=post,
+                author=author,
+            )
+
+            if not created:
+                return Response(
+                    {"detail": "You already liked this post"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            return Response(
+                status=status.HTTP_201_CREATED,
+            )
+
+        deleted, _ = Like.objects.filter(
+            post=post, author=author,
+        ).delete()
+
+        if not deleted:
+            return Response(
+                {"detail": "This post is not in your liked posts"},
+            )
+
+        return Response(
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="comment"
+    )
+    def comment(self, request, pk=None):
+        post = self.get_object()
+        author = self.request.user
+
+        Comment.objects.get_or_create(
+            post=post,
+            author=author,
+            content=request.data["content"],
+        )
+
+        return Response(
+            status=status.HTTP_201_CREATED,
+        )
+
     def get_queryset(self):
         queryset = self.queryset
 
@@ -66,5 +129,11 @@ class PostViewSet(
 
         if self.action == "retrieve":
             return PostDetailSerializer
+
+        if self.action == "like":
+            return serializers.Serializer
+
+        if self.action == "comment":
+            return CommentCreateSerializer
 
         return PostSerializer
