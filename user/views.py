@@ -4,10 +4,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework import generics, status, viewsets, mixins
 from rest_framework.response import Response
-from rest_framework_simplejwt.token_blacklist.models import (
-    BlacklistedToken,
-    OutstandingToken,
-)
 from rest_framework.decorators import action
 from rest_framework import serializers
 
@@ -15,22 +11,19 @@ import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
 from django.db.models import Count
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from user.serializers import (
     UserSerializer,
     LogoutSerializer,
     UserListSerializer,
     UserDetailSerializer,
-    UserRegisterSerializer
+    UserRegisterSerializer,
 )
 
-from social.models import (
-    Follow,
-    Post
-)
-from social.serializers import (
-    PostListSerializer
-)
+from social.models import Follow, Post
+from social.serializers import PostListSerializer
 
 
 class CreateUserView(generics.CreateAPIView):
@@ -51,9 +44,7 @@ class ManageFollowersView(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
-        return get_user_model().objects.filter(
-            following__following=self.request.user
-        )
+        return get_user_model().objects.filter(following__following=self.request.user)
 
 
 class ManageFollowingView(generics.ListAPIView):
@@ -61,9 +52,7 @@ class ManageFollowingView(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
-        return get_user_model().objects.filter(
-            followers__follower=self.request.user
-        )
+        return get_user_model().objects.filter(followers__follower=self.request.user)
 
 
 class ManagePostsView(generics.ListAPIView):
@@ -71,17 +60,9 @@ class ManagePostsView(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
-        return Post.objects.filter(
-            author=self.request.user
-        ).annotate(
-            comments_count=Count(
-                "comments",
-                distinct=True
-            ),
-            likes_count=Count(
-                "likes",
-                distinct=True
-            )
+        return Post.objects.filter(author=self.request.user).annotate(
+            comments_count=Count("comments", distinct=True),
+            likes_count=Count("likes", distinct=True),
         )
 
 
@@ -90,38 +71,41 @@ class ManageFollowingPostsView(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
-        following_ids = Follow.objects.filter(
-            follower=self.request.user
-        ).values("following_id")
+        following_ids = Follow.objects.filter(follower=self.request.user).values(
+            "following_id"
+        )
 
-        return Post.objects.filter(
-            author_id__in=following_ids
-        ).annotate(
-            comments_count=Count(
-                "comments",
-                distinct=True
-            ),
-            likes_count=Count(
-                "likes",
-                distinct=True
-            )
+        return Post.objects.filter(author_id__in=following_ids).annotate(
+            comments_count=Count("comments", distinct=True),
+            likes_count=Count("likes", distinct=True),
         )
 
 
 class CustomLogoutView(APIView):
+    """Blacklists your refresh token, loging you out."""
+
     permission_classes = (IsAuthenticated,)
     authentication_classes = (JWTAuthentication,)
 
-    @extend_schema(
-        request=LogoutSerializer,
-        responses={200: None}
-    )
-    def post(self, request):
-        for token in OutstandingToken.objects.filter(user=request.user):
-            BlacklistedToken.objects.get_or_create(token=token)
+    @extend_schema(request=LogoutSerializer, responses={200: None})
+    def post(self, request) -> Response:
+        serializer = LogoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            token = RefreshToken(serializer.validated_data["refresh_token"])
+            if str(token.get("user_id")) != str(request.user.pk):
+                return Response(
+                    {"detail": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST
+                )
+            token.blacklist()
+        except TokenError:
+            return Response(
+                {"detail": "Invalid or expired token."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         return Response(
-            {"detail": "Successfully logged out."},
-            status=status.HTTP_200_OK,
+            {"detail": "Successfully logged out"}, status=status.HTTP_200_OK
         )
 
 
@@ -162,22 +146,12 @@ class UserViewSet(
         queryset = self.queryset
         if self.action in ["list", "retrieve"]:
             queryset = queryset.annotate(
-                followers_count=Count(
-                    "followers",
-                    distinct=True
-                ),
-                following_count=Count(
-                    "following",
-                    distinct=True
-                ),
+                followers_count=Count("followers", distinct=True),
+                following_count=Count("following", distinct=True),
             )
         return queryset
 
-    @action(
-        detail=True,
-        methods=["post", "delete"],
-        url_path="follow"
-    )
+    @action(detail=True, methods=["post", "delete"], url_path="follow")
     def follow(self, request, pk=None):
         target = self.get_object()
 
@@ -189,8 +163,7 @@ class UserViewSet(
                 )
 
             _, created = Follow.objects.get_or_create(
-                follower=request.user,
-                following=target
+                follower=request.user, following=target
             )
             if not created:
                 return Response(

@@ -42,12 +42,11 @@ class UserSerializer(serializers.ModelSerializer):
             "followers_count",
             "following_count",
         )
-        read_only_fields = ("is_staff", "id",)
-        extra_kwargs = {
-            "password": {
-                "write_only": True, "min_length": 5
-            }
-        }
+        read_only_fields = (
+            "is_staff",
+            "id",
+        )
+        extra_kwargs = {"password": {"write_only": True, "min_length": 5}}
 
     def create(self, validated_data):
         return get_user_model().objects.create_user(**validated_data)
@@ -63,7 +62,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class LogoutSerializer(serializers.Serializer):
-    refresh = serializers.CharField()
+    refresh_token = serializers.CharField()
 
 
 class UserDetailSerializer(UserSerializer):
@@ -92,9 +91,5 @@ class UserRegisterSerializer(UserSerializer):
             "username",
             "password",
         )
-        read_only_fields = ("id", )
-        extra_kwargs = {
-            "password": {
-                "write_only": True, "min_length": 5
-            }
-        }
+        read_only_fields = ("id",)
+        extra_kwargs = {"password": {"write_only": True, "min_length": 5}}
