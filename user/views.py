@@ -27,10 +27,14 @@ from social.serializers import PostListSerializer
 
 
 class CreateUserView(generics.CreateAPIView):
+    """Registers a user"""
+
     serializer_class = UserRegisterSerializer
 
 
 class ManageUserView(generics.RetrieveUpdateAPIView):
+    """Returns user's self page, possibility to modify it"""
+
     serializer_class = UserSerializer
     authentication_classes = (JWTAuthentication,)
     permission_classes = (IsAuthenticated,)
@@ -40,6 +44,8 @@ class ManageUserView(generics.RetrieveUpdateAPIView):
 
 
 class ManageFollowersView(generics.ListAPIView):
+    """Returns self's followers list"""
+
     serializer_class = UserListSerializer
     permission_classes = (IsAuthenticated,)
 
@@ -48,6 +54,8 @@ class ManageFollowersView(generics.ListAPIView):
 
 
 class ManageFollowingView(generics.ListAPIView):
+    """Returns self's following list"""
+
     serializer_class = UserListSerializer
     permission_classes = (IsAuthenticated,)
 
@@ -56,6 +64,8 @@ class ManageFollowingView(generics.ListAPIView):
 
 
 class ManagePostsView(generics.ListAPIView):
+    """Returns self's posts list"""
+
     serializer_class = PostListSerializer
     permission_classes = (IsAuthenticated,)
 
@@ -67,6 +77,8 @@ class ManagePostsView(generics.ListAPIView):
 
 
 class ManageFollowingPostsView(generics.ListAPIView):
+    """Returns self following's posts list"""
+
     serializer_class = PostListSerializer
     permission_classes = (IsAuthenticated,)
 
@@ -82,7 +94,7 @@ class ManageFollowingPostsView(generics.ListAPIView):
 
 
 class CustomLogoutView(APIView):
-    """Blacklists your refresh token, loging you out."""
+    """Blacklists your refresh token, loging you out"""
 
     permission_classes = (IsAuthenticated,)
     authentication_classes = (JWTAuthentication,)
@@ -124,6 +136,8 @@ class UserViewSet(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
 ):
+    """User ViewSet. List, retrieval, filtering by username, follow and unfollow users"""
+
     queryset = get_user_model().objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsAuthenticated,)

@@ -39,6 +39,7 @@ class PostViewSet(
     mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
 ):
+    """ Post ViewSet. List, retrieval, filtering by hashtags, commenting and like/un-like """
     queryset = Post.objects.all()
     serializer_class = PostSerializer
     permission_classes = (IsAuthenticated,)
