@@ -1,17 +1,21 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework import routers
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
-    TokenVerifyView,
 )
 
 from user.views import (
     CreateUserView,
     ManageUserView,
     CustomLogoutView,
+    UserViewSet,
 )
 
 app_name = "user"
+
+router = routers.DefaultRouter()
+router.register("users", UserViewSet)
 
 urlpatterns = [
     path(
@@ -38,5 +42,9 @@ urlpatterns = [
         "logout/",
         CustomLogoutView.as_view(),
         name="logout"
-    )
+    ),
+    path(
+        "",
+        include(router.urls)
+    ),
 ]

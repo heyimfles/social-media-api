@@ -37,3 +37,29 @@ class UserSerializer(serializers.ModelSerializer):
 
 class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField()
+
+
+class UserListSerializer(UserSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = (
+            "id",
+            "email",
+            "username",
+            "profile_picture",
+        #     followers
+        )
+
+
+class UserDetailSerializer(UserSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = (
+            "id",
+            "email",
+            "username",
+            "bio",
+            "profile_picture",
+            "gender",
+        # followers, posts
+        )
