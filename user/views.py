@@ -1,9 +1,8 @@
-from drf_spectacular.utils import extend_schema, OpenApiParameter
-from rest_framework import generics
+from drf_spectacular.utils import extend_schema
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework import status, viewsets, mixins
+from rest_framework import generics, status, viewsets, mixins
 from rest_framework.response import Response
 from rest_framework_simplejwt.token_blacklist.models import (
     BlacklistedToken,
@@ -26,7 +25,11 @@ from user.serializers import (
 )
 
 from social.models import (
-    Follow
+    Follow,
+    Post
+)
+from social.serializers import (
+    PostListSerializer
 )
 
 
@@ -60,6 +63,48 @@ class ManageFollowingView(generics.ListAPIView):
     def get_queryset(self):
         return get_user_model().objects.filter(
             followers__follower=self.request.user
+        )
+
+
+class ManagePostsView(generics.ListAPIView):
+    serializer_class = PostListSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        return Post.objects.filter(
+            author=self.request.user
+        ).annotate(
+            comments_count=Count(
+                "comments",
+                distinct=True
+            ),
+            likes_count=Count(
+                "likes",
+                distinct=True
+            )
+        )
+
+
+class ManageFollowingPostsView(generics.ListAPIView):
+    serializer_class = PostListSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        following_ids = Follow.objects.filter(
+            follower=self.request.user
+        ).values("following_id")
+
+        return Post.objects.filter(
+            author_id__in=following_ids
+        ).annotate(
+            comments_count=Count(
+                "comments",
+                distinct=True
+            ),
+            likes_count=Count(
+                "likes",
+                distinct=True
+            )
         )
 
 
@@ -98,7 +143,7 @@ class UserViewSet(
     queryset = get_user_model().objects.all()
     serializer_class = UserSerializer
     permission_classes = (IsAuthenticated,)
-    filter_backends = [DjangoFilterBackend]
+    filter_backends = (DjangoFilterBackend,)
     filterset_class = UserFilter
 
     def get_serializer_class(self):
@@ -117,8 +162,14 @@ class UserViewSet(
         queryset = self.queryset
         if self.action in ["list", "retrieve"]:
             queryset = queryset.annotate(
-                followers_count=Count("followers", distinct=True),
-                following_count=Count("following", distinct=True),
+                followers_count=Count(
+                    "followers",
+                    distinct=True
+                ),
+                following_count=Count(
+                    "following",
+                    distinct=True
+                ),
             )
         return queryset
 

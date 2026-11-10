@@ -14,7 +14,7 @@ def pfp_file_path(instance, filename):
     _, ext = os.path.splitext(filename)
     filename = f"{slugify(instance.username)}-{uuid.uuid4()}{ext}"
 
-    return os.path.join("uploads/profile_pictures", filename)
+    return os.path.join("uploads/profile_pictures/", filename)
 
 
 class UserManager(BaseUserManager):
@@ -60,6 +60,7 @@ class User(AbstractUser):
     bio = models.CharField(max_length=255, null=True, blank=True)
     profile_picture = models.ImageField(
         null=True,
+        blank=True,
         upload_to=pfp_file_path,
     )
     gender = models.CharField(

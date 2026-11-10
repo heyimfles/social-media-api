@@ -33,6 +33,10 @@ urlpatterns = [
         include("user.urls", namespace="user")
     ),
     path(
+        "api/",
+        include("social.urls", namespace="social")
+    ),
+    path(
         "api/doc/",
         SpectacularAPIView.as_view(),
         name="schema"

@@ -1,7 +1,17 @@
+import os
+import uuid
+
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.db.models import F, Q
+from django.utils.text import slugify
 
+
+def post_image_file_path(instance, filename):
+    _, ext = os.path.splitext(filename)
+    filename = f"{slugify(instance.title)}-{uuid.uuid4()}{extension}"
+
+    return os.path.join("uploads/posts_images/", filename)
 
 class Follow(models.Model):
     follower = models.ForeignKey(
@@ -32,14 +42,20 @@ class Follow(models.Model):
 
 class Post(models.Model):
     title = models.CharField(max_length=100)
-    content = models.CharField(max_length=255)
+    content = models.TextField(
+        help_text="Create a post . . ."
+    )
     hashtags = models.CharField(max_length=255)
     author = models.ForeignKey(
         get_user_model(),
         on_delete=models.CASCADE,
         related_name="posts",
     )
-
+    image = models.ImageField(
+        null=True,
+        blank=True,
+        upload_to=post_image_file_path,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

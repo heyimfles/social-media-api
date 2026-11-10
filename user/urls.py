@@ -12,6 +12,8 @@ from user.views import (
     UserViewSet,
     ManageFollowersView,
     ManageFollowingView,
+    ManagePostsView,
+    ManageFollowingPostsView
 )
 
 app_name = "user"
@@ -36,6 +38,11 @@ urlpatterns = [
         name="token_refresh"
     ),
     path(
+        "logout/",
+        CustomLogoutView.as_view(),
+        name="logout"
+    ),
+    path(
         "me/",
         ManageUserView.as_view(),
         name="manage"
@@ -51,9 +58,14 @@ urlpatterns = [
         name="my_following"
     ),
     path(
-        "logout/",
-        CustomLogoutView.as_view(),
-        name="logout"
+        "me/posts/",
+        ManagePostsView.as_view(),
+        name="my_posts"
+    ),
+    path(
+        "me/following/posts/",
+        ManageFollowingPostsView.as_view(),
+        name="my_following_posts"
     ),
     path(
         "",
