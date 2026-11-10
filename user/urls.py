@@ -10,6 +10,8 @@ from user.views import (
     ManageUserView,
     CustomLogoutView,
     UserViewSet,
+    ManageFollowersView,
+    ManageFollowingView,
 )
 
 app_name = "user"
@@ -37,6 +39,16 @@ urlpatterns = [
         "me/",
         ManageUserView.as_view(),
         name="manage"
+    ),
+    path(
+        "me/followers/",
+        ManageFollowersView.as_view(),
+        name="my_followers"
+    ),
+    path(
+        "me/following/",
+        ManageFollowingView.as_view(),
+        name="my_following"
     ),
     path(
         "logout/",

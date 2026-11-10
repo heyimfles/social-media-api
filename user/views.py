@@ -43,6 +43,26 @@ class ManageUserView(generics.RetrieveUpdateAPIView):
         return self.request.user
 
 
+class ManageFollowersView(generics.ListAPIView):
+    serializer_class = UserListSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        return get_user_model().objects.filter(
+            following__following=self.request.user
+        )
+
+
+class ManageFollowingView(generics.ListAPIView):
+    serializer_class = UserListSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        return get_user_model().objects.filter(
+            followers__follower=self.request.user
+        )
+
+
 class CustomLogoutView(APIView):
     permission_classes = (IsAuthenticated,)
     authentication_classes = (JWTAuthentication,)
