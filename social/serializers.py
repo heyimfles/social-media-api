@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from social.models import (
@@ -7,15 +8,10 @@ from social.models import (
     Like,
 )
 
-
 class FollowSerializer(serializers.ModelSerializer):
     class Meta:
         model = Follow
-        fields = (
-            "id",
-            "follower",
-            "following",
-        )
+        fields = '__all__'
 
 
 class PostSerializer(serializers.ModelSerializer):

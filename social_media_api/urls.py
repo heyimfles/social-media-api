@@ -29,7 +29,7 @@ urlpatterns = [
         admin.site.urls
     ),
     path(
-        "api/user/",
+        "api/",
         include("user.urls", namespace="user")
     ),
     path(

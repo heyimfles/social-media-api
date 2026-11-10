@@ -2,7 +2,32 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 
+class UserListSerializer(serializers.ModelSerializer):
+    followers_count = serializers.IntegerField(read_only=True)
+    following_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = get_user_model()
+        fields = (
+            "id",
+            "email",
+            "username",
+            "profile_picture",
+            "followers_count",
+            "following_count",
+        )
+
+
 class UserSerializer(serializers.ModelSerializer):
+    followers_count = serializers.IntegerField(
+        source="followers.count",
+        read_only=True,
+    )
+    following_count = serializers.IntegerField(
+        source="following.count",
+        read_only=True,
+    )
+
     class Meta:
         model = get_user_model()
         fields = (
@@ -14,8 +39,10 @@ class UserSerializer(serializers.ModelSerializer):
             "profile_picture",
             "gender",
             "is_staff",
+            "followers_count",
+            "following_count",
         )
-        read_only_fields = ("is_staff",)
+        read_only_fields = ("is_staff", "id",)
         extra_kwargs = {
             "password": {
                 "write_only": True, "min_length": 5
@@ -39,27 +66,35 @@ class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField()
 
 
-class UserListSerializer(UserSerializer):
-    class Meta:
-        model = get_user_model()
-        fields = (
-            "id",
-            "email",
-            "username",
-            "profile_picture",
-        #     followers
-        )
-
-
 class UserDetailSerializer(UserSerializer):
+    followers_count = serializers.IntegerField(read_only=True)
+    following_count = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = get_user_model()
         fields = (
             "id",
-            "email",
             "username",
             "bio",
             "profile_picture",
             "gender",
-        # followers, posts
+            "followers_count",
+            "following_count",
         )
+
+
+class UserRegisterSerializer(UserSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = (
+            "id",
+            "email",
+            "username",
+            "password",
+        )
+        read_only_fields = ("id", )
+        extra_kwargs = {
+            "password": {
+                "write_only": True, "min_length": 5
+            }
+        }
