@@ -1,6 +1,6 @@
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from django.db import models
 from django.contrib.auth import get_user_model
@@ -56,7 +56,7 @@ class Post(models.Model):
         upload_to=post_image_file_path,
     )
     published_at = models.DateTimeField(
-        default=datetime.now,
+        default=datetime.now(timezone.utc),
     )
     is_published = models.BooleanField(
         default=True,
