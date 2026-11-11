@@ -1,5 +1,6 @@
 import os
 import uuid
+from datetime import datetime
 
 from django.db import models
 from django.contrib.auth import get_user_model
@@ -12,6 +13,7 @@ def post_image_file_path(instance, filename):
     filename = f"{slugify(instance.title)}-{uuid.uuid4()}{extension}"
 
     return os.path.join("uploads/posts_images/", filename)
+
 
 class Follow(models.Model):
     follower = models.ForeignKey(
@@ -31,8 +33,7 @@ class Follow(models.Model):
                 fields=["follower", "following"], name="unique_follow"
             ),
             models.CheckConstraint(
-                condition=~Q(follower=F("following")),
-                name="prevent_self_follow"
+                condition=~Q(follower=F("following")), name="prevent_self_follow"
             ),
         ]
 
@@ -42,9 +43,7 @@ class Follow(models.Model):
 
 class Post(models.Model):
     title = models.CharField(max_length=100)
-    content = models.TextField(
-        help_text="Create a post . . ."
-    )
+    content = models.TextField(help_text="Create a post . . .")
     hashtags = models.CharField(max_length=255)
     author = models.ForeignKey(
         get_user_model(),
@@ -56,7 +55,12 @@ class Post(models.Model):
         blank=True,
         upload_to=post_image_file_path,
     )
-    created_at = models.DateTimeField(auto_now_add=True)
+    published_at = models.DateTimeField(
+        default=datetime.now,
+    )
+    is_published = models.BooleanField(
+        default=True,
+    )
 
     def __str__(self):
         return f"{self.title}, {self.author}"
@@ -94,9 +98,7 @@ class Like(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(
-                fields=["author", "post"], name="unique_like"
-            )
+            models.UniqueConstraint(fields=["author", "post"], name="unique_like")
         ]
 
     def __str__(self):

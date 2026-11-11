@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from rest_framework import mixins, viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -18,7 +20,10 @@ from social.serializers import (
     PostListSerializer,
     PostDetailSerializer,
     CommentCreateSerializer,
+    PostCreateSerializer,
 )
+
+from social.tasks import publish_post
 
 
 class PostFilter(django_filters.FilterSet):
@@ -28,9 +33,7 @@ class PostFilter(django_filters.FilterSet):
 
     class Meta:
         model = Post
-        fields = (
-            "hashtags",
-        )
+        fields = ("hashtags",)
 
 
 class PostViewSet(
@@ -39,22 +42,28 @@ class PostViewSet(
     mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
 ):
-    """ Post ViewSet. List, retrieval, filtering by hashtags, commenting and like/un-like """
+    """Post ViewSet. List, retrieval, filtering by hashtags, commenting, like/un-like and scheduled post creation"""
+
     queryset = Post.objects.all()
     serializer_class = PostSerializer
     permission_classes = (IsAuthenticated,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = PostFilter
 
-
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-    @action(
-        detail=True,
-        methods=["post", "delete"],
-        url_path="like"
-    )
+        if serializer.validated_data["published_at"] == datetime.now:
+            post = serializer.save(is_published=True)
+        else:
+            post = serializer.save(is_published=False)
+
+        publish_post.apply_async(
+            args=(post.id,),
+            eta=post.published_at,
+        )
+
+    @action(detail=True, methods=["post", "delete"], url_path="like")
     def like(self, request, pk=None):
         post = self.get_object()
         author = self.request.user
@@ -76,7 +85,8 @@ class PostViewSet(
             )
 
         deleted, _ = Like.objects.filter(
-            post=post, author=author,
+            post=post,
+            author=author,
         ).delete()
 
         if not deleted:
@@ -88,11 +98,7 @@ class PostViewSet(
             status=status.HTTP_204_NO_CONTENT,
         )
 
-    @action(
-        detail=True,
-        methods=["post"],
-        url_path="comment"
-    )
+    @action(detail=True, methods=["post"], url_path="comment")
     def comment(self, request, pk=None):
         post = self.get_object()
         author = self.request.user
@@ -108,18 +114,14 @@ class PostViewSet(
         )
 
     def get_queryset(self):
-        queryset = self.queryset
+        queryset = self.queryset.filter(
+            is_published=True,
+        )
 
         if self.action == "list":
             queryset = queryset.annotate(
-                comments_count=Count(
-                    "comments",
-                    distinct=True
-                ),
-                likes_count=Count(
-                    "likes",
-                    distinct=True
-                )
+                comments_count=Count("comments", distinct=True),
+                likes_count=Count("likes", distinct=True),
             )
 
         return queryset
@@ -136,5 +138,8 @@ class PostViewSet(
 
         if self.action == "comment":
             return CommentCreateSerializer
+
+        if self.action == "create":
+            return PostCreateSerializer
 
         return PostSerializer

@@ -27,9 +27,7 @@ class CommentSerializer(serializers.ModelSerializer):
 class CommentCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
-        fields = (
-            "content",
-        )
+        fields = ("content",)
 
 
 class PostSerializer(serializers.ModelSerializer):
@@ -41,7 +39,8 @@ class PostSerializer(serializers.ModelSerializer):
             "content",
             "hashtags",
             "image",
-            "created_at",
+            "published_at",
+            "is_published",
         )
 
 
@@ -62,7 +61,7 @@ class PostListSerializer(serializers.ModelSerializer):
             "hashtags",
             "image",
             "author",
-            "created_at",
+            "published_at",
             "comments_count",
             "likes_count",
         )
@@ -84,7 +83,7 @@ class PostDetailSerializer(serializers.ModelSerializer):
             "content",
             "hashtags",
             "image",
-            "created_at",
+            "published_at",
             "comments",
             "likes",
         )
@@ -102,4 +101,17 @@ class LikeSerializer(serializers.ModelSerializer):
             "id",
             "author",
             "post",
+        )
+
+
+class PostCreateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Post
+        fields = (
+            "title",
+            "content",
+            "hashtags",
+            "image",
+            "published_at",
         )
