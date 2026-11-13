@@ -22,6 +22,10 @@ class CommentSerializer(serializers.ModelSerializer):
             "author",
             "created_at",
         )
+        read_only_fields = (
+            "id",
+            "created_at",
+        )
 
 
 class CommentCreateSerializer(serializers.ModelSerializer):

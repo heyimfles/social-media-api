@@ -1,16 +1,16 @@
 import os
 import uuid
-from datetime import datetime, timezone
 
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.db.models import F, Q
 from django.utils.text import slugify
+from django.utils import timezone
 
 
 def post_image_file_path(instance, filename):
     _, ext = os.path.splitext(filename)
-    filename = f"{slugify(instance.title)}-{uuid.uuid4()}{extension}"
+    filename = f"{slugify(instance.title)}-{uuid.uuid4()}{ext}"
 
     return os.path.join("uploads/posts_images/", filename)
 
@@ -56,7 +56,7 @@ class Post(models.Model):
         upload_to=post_image_file_path,
     )
     published_at = models.DateTimeField(
-        default=datetime.now(timezone.utc),
+        default=timezone.now,
     )
     is_published = models.BooleanField(
         default=True,

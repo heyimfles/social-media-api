@@ -13,7 +13,8 @@ from user.views import (
     ManageFollowersView,
     ManageFollowingView,
     ManagePostsView,
-    ManageFollowingPostsView
+    ManageFollowingPostsView,
+    ManageLikedPostsView
 )
 
 app_name = "user"
@@ -66,6 +67,11 @@ urlpatterns = [
         "me/following/posts/",
         ManageFollowingPostsView.as_view(),
         name="my_following_posts"
+    ),
+    path(
+        "me/liked-posts/",
+        ManageLikedPostsView.as_view(),
+        name="my_liked_posts"
     ),
     path(
         "",

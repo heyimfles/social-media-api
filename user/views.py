@@ -22,7 +22,7 @@ from user.serializers import (
     UserRegisterSerializer,
 )
 
-from social.models import Follow, Post
+from social.models import Follow, Post, Like
 from social.serializers import PostListSerializer
 
 
@@ -30,6 +30,12 @@ class CreateUserView(generics.CreateAPIView):
     """Registers a user"""
 
     serializer_class = UserRegisterSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class ManageUserView(generics.RetrieveUpdateAPIView):
@@ -50,7 +56,10 @@ class ManageFollowersView(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
-        return get_user_model().objects.filter(following__following=self.request.user)
+        return get_user_model().objects.filter(following__following=self.request.user).annotate(
+            comments_count=Count("comments", distinct=True),
+            likes_count=Count("likes", distinct=True),
+        )
 
 
 class ManageFollowingView(generics.ListAPIView):
@@ -60,7 +69,10 @@ class ManageFollowingView(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
-        return get_user_model().objects.filter(followers__follower=self.request.user)
+        return get_user_model().objects.filter(followers__follower=self.request.user).annotate(
+            comments_count=Count("comments", distinct=True),
+            likes_count=Count("likes", distinct=True),
+        )
 
 
 class ManagePostsView(generics.ListAPIView):
@@ -73,7 +85,7 @@ class ManagePostsView(generics.ListAPIView):
         return Post.objects.filter(author=self.request.user).annotate(
             comments_count=Count("comments", distinct=True),
             likes_count=Count("likes", distinct=True),
-        )
+        ).select_related()
 
 
 class ManageFollowingPostsView(generics.ListAPIView):
@@ -87,10 +99,21 @@ class ManageFollowingPostsView(generics.ListAPIView):
             "following_id"
         )
 
-        return Post.objects.filter(author_id__in=following_ids).annotate(
+        return Post.objects.filter(author_id__in=following_ids, is_published=True).annotate(
             comments_count=Count("comments", distinct=True),
             likes_count=Count("likes", distinct=True),
-        )
+        ).select_related()
+
+
+class ManageLikedPostsView(generics.ListAPIView):
+    """Returns self's liked posts list"""
+    serializer_class = PostListSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        liked_ids = Like.objects.filter(author=self.request.user).values()
+
+        return Post.objects.filter(id__in=liked_ids, is_published=True).select_related()
 
 
 class CustomLogoutView(APIView):

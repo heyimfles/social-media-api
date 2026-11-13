@@ -1,6 +1,4 @@
-from datetime import datetime
-
-from rest_framework import mixins, viewsets, status
+from rest_framework import mixins, viewsets, status, generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import serializers
@@ -21,6 +19,7 @@ from social.serializers import (
     PostDetailSerializer,
     CommentCreateSerializer,
     PostCreateSerializer,
+    CommentSerializer,
 )
 
 from social.tasks import publish_post
@@ -41,8 +40,11 @@ class PostViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
     mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
 ):
-    """Post ViewSet. List, retrieval, filtering by hashtags, commenting, like/un-like and scheduled post creation"""
+    """Post ViewSet. List, retrieval, filtering by hashtags, commenting,
+     like/un-like and scheduled post creation. Possibility to update and delete own posts """
 
     queryset = Post.objects.all()
     serializer_class = PostSerializer
@@ -51,12 +53,9 @@ class PostViewSet(
     filterset_class = PostFilter
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
-
-        if serializer.validated_data["published_at"] == datetime.now:
-            post = serializer.save(is_published=True)
-        else:
-            post = serializer.save(is_published=False)
+        post = serializer.save(
+            author=self.request.user,
+        )
 
         publish_post.apply_async(
             args=(post.id,),
@@ -124,7 +123,10 @@ class PostViewSet(
                 likes_count=Count("likes", distinct=True),
             )
 
-        return queryset
+        if self.action in ["update", "partial_update", "destroy"]:
+            queryset = queryset.filter(author=self.request.user)
+
+        return queryset.select_related()
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -143,3 +145,15 @@ class PostViewSet(
             return PostCreateSerializer
 
         return PostSerializer
+
+
+class CommentUpdateDestroyView(
+    generics.UpdateAPIView,
+    generics.DestroyAPIView,
+):
+    queryset = Comment.objects.all()
+    serializer_class = CommentSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset(self):
+        return self.queryset.filter(author=self.request.user).select_related()

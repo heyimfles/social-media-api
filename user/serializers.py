@@ -1,5 +1,7 @@
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from rest_framework import serializers
+from django.contrib.auth.password_validation import validate_password
 
 
 class UserListSerializer(serializers.ModelSerializer):
@@ -92,4 +94,12 @@ class UserRegisterSerializer(UserSerializer):
             "password",
         )
         read_only_fields = ("id",)
-        extra_kwargs = {"password": {"write_only": True, "min_length": 5}}
+        extra_kwargs = {"password": {"write_only": True,}}
+
+    def validate_password(self, value):
+        try:
+            validate_password(value)
+        except ValidationError:
+            raise serializers.ValidationError(
+                {"detail": "Invalid password."}
+            )

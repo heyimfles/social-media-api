@@ -25,7 +25,7 @@ def check_for_unpublished():
     count = 0
 
     for post in posts:
-        if post.published_at > datetime.now(timezone.utc):
+        if post.published_at >= datetime.now(timezone.utc):
             post.is_published = True
             post.save(update_fields=["is_published"])
             count += 1
