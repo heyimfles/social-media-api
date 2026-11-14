@@ -1,0 +1,105 @@
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from rest_framework import serializers
+from django.contrib.auth.password_validation import validate_password
+
+
+class UserListSerializer(serializers.ModelSerializer):
+    followers_count = serializers.IntegerField(read_only=True)
+    following_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = get_user_model()
+        fields = (
+            "id",
+            "email",
+            "username",
+            "profile_picture",
+            "followers_count",
+            "following_count",
+        )
+
+
+class UserSerializer(serializers.ModelSerializer):
+    followers_count = serializers.IntegerField(
+        source="followers.count",
+        read_only=True,
+    )
+    following_count = serializers.IntegerField(
+        source="following.count",
+        read_only=True,
+    )
+
+    class Meta:
+        model = get_user_model()
+        fields = (
+            "id",
+            "email",
+            "password",
+            "username",
+            "bio",
+            "profile_picture",
+            "gender",
+            "is_staff",
+            "followers_count",
+            "following_count",
+        )
+        read_only_fields = (
+            "is_staff",
+            "id",
+        )
+        extra_kwargs = {"password": {"write_only": True, "min_length": 5}}
+
+    def create(self, validated_data):
+        return get_user_model().objects.create_user(**validated_data)
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop("password", None)
+        user = super().update(instance, validated_data)
+        if password:
+            user.set_password(password)
+            user.save()
+
+        return user
+
+
+class LogoutSerializer(serializers.Serializer):
+    refresh_token = serializers.CharField()
+
+
+class UserDetailSerializer(UserSerializer):
+    followers_count = serializers.IntegerField(read_only=True)
+    following_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = get_user_model()
+        fields = (
+            "id",
+            "username",
+            "bio",
+            "profile_picture",
+            "gender",
+            "followers_count",
+            "following_count",
+        )
+
+
+class UserRegisterSerializer(UserSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = (
+            "id",
+            "email",
+            "username",
+            "password",
+        )
+        read_only_fields = ("id",)
+        extra_kwargs = {"password": {"write_only": True,}}
+
+    def validate_password(self, value):
+        try:
+            validate_password(value)
+        except ValidationError:
+            raise serializers.ValidationError(
+                {"detail": "Invalid password."}
+            )
