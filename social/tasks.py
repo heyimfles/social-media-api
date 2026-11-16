@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from celery import shared_task
+from celery import shared_task, Celery
 
 from social.models import Post
 
@@ -13,10 +13,12 @@ def publish_post(post_id):
     if post.is_published:
         return "Post already published."
 
-    post.is_published = True
-    post.save(update_fields=["is_published"])
+    if post.published_at <= datetime.now(timezone.utc):
+        post.is_published = True
+        post.save(update_fields=["is_published"])
+        return "Post is published."
 
-    return "Post is published."
+    return "It is not time to publish the post yet."
 
 
 @shared_task
@@ -25,7 +27,7 @@ def check_for_unpublished():
     count = 0
 
     for post in posts:
-        if post.published_at >= datetime.now(timezone.utc):
+        if post.published_at <= datetime.now(timezone.utc):
             post.is_published = True
             post.save(update_fields=["is_published"])
             count += 1

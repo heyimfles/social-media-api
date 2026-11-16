@@ -111,7 +111,7 @@ class ManageLikedPostsView(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
-        liked_ids = Like.objects.filter(author=self.request.user).values()
+        liked_ids = Like.objects.filter(author=self.request.user).values("post_id")
 
         return Post.objects.filter(id__in=liked_ids, is_published=True).select_related()
 

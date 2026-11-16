@@ -43,6 +43,9 @@ source venv/bin/activate
 ```bash
 pip install -r requirements.txt
 python manage.py migrate
+docker run -d -p 6379:6379 redis
+celery -A social worker -l INFO
+celery -A social beat -l INFO
 python manage.py runserver
 ```
 

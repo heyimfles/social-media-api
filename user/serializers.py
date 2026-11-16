@@ -103,3 +103,4 @@ class UserRegisterSerializer(UserSerializer):
             raise serializers.ValidationError(
                 {"detail": "Invalid password."}
             )
+        return value

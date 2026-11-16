@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework import serializers
 from rest_framework.decorators import action
 
+from datetime import datetime, timezone
+
 import django_filters
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Count
@@ -53,8 +55,10 @@ class PostViewSet(
     filterset_class = PostFilter
 
     def perform_create(self, serializer):
+        to_publish = bool(serializer.validated_data["published_at"] == datetime.now(timezone.utc))
         post = serializer.save(
             author=self.request.user,
+            is_published=to_publish,
         )
 
         publish_post.apply_async(
@@ -101,11 +105,14 @@ class PostViewSet(
     def comment(self, request, pk=None):
         post = self.get_object()
         author = self.request.user
+        serializer = CommentCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        content = serializer.validated_data["content"]
 
-        Comment.objects.get_or_create(
+        Comment.objects.create(
             post=post,
             author=author,
-            content=request.data["content"],
+            content=content,
         )
 
         return Response(
